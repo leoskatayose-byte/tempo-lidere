@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="pt-BR" data-tema="lidere">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestor de Tempo · Lidere</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23101a2e'/%3E%3Ccircle cx='32' cy='32' r='20' fill='none' stroke='%23d4a840' stroke-width='3'/%3E%3Cpath d='M32 18v14l9 6' fill='none' stroke='%23d4a840' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ===== Padrão visual LIDERE v2 (tema escuro da casa + claro) ===== */
+:root, :root[data-tema="lidere"]{
+  --bg:#07090d; --bg2:#05070a; --panel:#0e131d; --panel2:#131926; --raise:#1a2233;
+  --line:rgba(212,168,64,.16); --line-f:rgba(255,255,255,.14);
+  --acc:#d4a840; --acc-s:#f2c94c; --acc-d:#a8791e; --acc-ink:#1a1204;
+  --meta:#5a9fe0; --meta-s:#8dc0ef;
+  --pos:#3ea06b; --neg:#ef6b6b; --warn:#e0b64a; --roxo:#8a7cf2;
+  --txt:#e9edf4; --dim:#9aa3b2; --mut:#6b7484;
+  --glow:rgba(212,168,64,.30); --sombra:none;
+}
+:root[data-tema="lidere"] body{
+  background:radial-gradient(1100px 600px at 15% -5%, #101a2e 0, transparent 55%),
+    radial-gradient(900px 500px at 100% 0, #0d1420 0, transparent 50%), var(--bg);
+  background-attachment:fixed;
+}
+:root[data-tema="claro"]{
+  --bg:#f4f6f9; --bg2:#eceff4; --panel:#ffffff; --panel2:#f5f7fa; --raise:#e9edf3;
+  --line:rgba(18,35,61,.11); --line-f:rgba(18,35,61,.22);
+  --acc:#a8791e; --acc-s:#8a6115; --acc-d:#6d4c10; --acc-ink:#ffffff;
+  --meta:#1f5fa8; --meta-s:#174a85;
+  --pos:#0a7d3f; --neg:#c62f2b; --warn:#9a6c05; --roxo:#5b4bd6;
+  --txt:#101c2b; --dim:#46586d; --mut:#76889b;
+  --glow:rgba(168,121,30,.22);
+  --sombra:0 1px 3px rgba(18,35,61,.08),0 1px 2px rgba(18,35,61,.04);
+}
+:root[data-tema="claro"] .panel,:root[data-tema="claro"] .stat{box-shadow:var(--sombra)}
+:root[data-tema="claro"] .toast{background:var(--txt);color:#fff}
+
+*{box-sizing:border-box} html,body{margin:0;height:100%}
+body{background:linear-gradient(180deg,var(--bg) 0,var(--bg2) 100%),var(--bg);color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;color:inherit} input,select,textarea{font-family:inherit}
+a{color:var(--acc-s)}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--line-f);border-radius:6px}
+
+.shell{display:grid;grid-template-columns:236px 1fr;min-height:100vh}
+.side{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;background:linear-gradient(180deg,var(--panel) 0,var(--bg) 90%);
+  border-right:1px solid var(--line);padding:20px 14px 14px;overflow-y:auto;z-index:30}
+.brand{display:block;padding:4px 6px 18px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.brand svg{width:100%;height:auto;display:block}
+.brand .sub{font-size:9px;letter-spacing:2.4px;color:var(--mut);text-transform:uppercase;margin-top:11px;font-weight:700;padding-left:2px}
+.nav-g{margin-bottom:16px}
+.nav-g > b{display:block;font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:var(--mut);font-weight:800;padding:0 8px 7px}
+.nav-i{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border:none;border-left:2px solid transparent;
+  padding:8px 10px;border-radius:0 8px 8px 0;color:var(--dim);font-size:13px;font-weight:600;transition:.14s;margin-bottom:1px}
+.nav-i:hover{background:var(--panel2);color:var(--txt)}
+.nav-i.on{background:linear-gradient(90deg,var(--panel2),transparent);border-left-color:var(--acc);color:var(--txt)}
+.nav-i .ic{width:16px;flex:0 0 16px;display:inline-flex;justify-content:center;opacity:.9}
+.nav-i.on .ic{color:var(--acc)}
+.nav-i .n{margin-left:auto;font-size:10.5px;font-weight:700;color:var(--mut);background:var(--panel2);border-radius:20px;padding:1px 7px;min-width:20px;text-align:center}
+.side-foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--line)}
+.temas{display:flex;gap:6px;padding:2px 6px 6px}
+.tema-b{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--line-f);padding:0}
+.tema-b.on{border-color:var(--txt);box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--txt)}
+.side-foot .lnk{display:block;width:100%;text-align:left;background:none;border:none;color:var(--mut);font-size:11.5px;padding:5px 8px;border-radius:7px;font-weight:600}
+.side-foot .lnk:hover{color:var(--acc);background:var(--panel2)}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 26px;border-bottom:1px solid var(--line);
+  background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px)}
+.topbar h1{margin:0;font-size:19px;font-weight:700;letter-spacing:-.3px}
+.topbar h1 span{display:block;font-size:11.5px;font-weight:500;color:var(--mut);margin-top:3px}
+.tb-acts{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.burger{display:none;background:var(--panel2);border:1px solid var(--line);border-radius:9px;width:34px;height:34px;font-size:15px}
+.page{padding:22px 26px 70px;max-width:1440px;width:100%}
+@media(max-width:1024px){
+  .shell{grid-template-columns:1fr}
+  .side{position:fixed;left:0;top:0;width:250px;transform:translateX(-100%);transition:transform .25s;box-shadow:20px 0 50px rgba(0,0,0,.5)}
+  .side.open{transform:none}
+  .burger{display:inline-flex;align-items:center;justify-content:center}
+  .topbar,.page{padding-left:16px;padding-right:16px}
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:25;display:none}.scrim.on{display:block}
+}
+
+.btn{border:1px solid var(--line-f);background:var(--panel2);color:var(--txt);padding:8px 13px;border-radius:9px;font-size:12.5px;font-weight:600;
+  display:inline-flex;gap:7px;align-items:center;transition:.14s;white-space:nowrap}
+.btn:hover{border-color:var(--acc);color:var(--acc-s)}
+.btn-gold{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:700}
+.btn-gold:hover{background:var(--acc-s);border-color:var(--acc-s);color:var(--acc-ink);box-shadow:0 0 20px var(--glow)}
+.btn-sm{padding:5px 9px;font-size:11.5px;border-radius:8px}
+.btn-ghost{background:transparent;border-color:var(--line)}
+.btn-neg{border-color:color-mix(in srgb,var(--neg) 45%,transparent);color:var(--neg)}
+.seg{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:none;background:transparent;padding:7px 11px;font-size:12px;font-weight:600;color:var(--dim)}
+.seg button.on{background:var(--acc);color:var(--acc-ink)}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.field label{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--mut)}
+.field input,.field select,.field textarea,.inl{background:var(--panel2);border:1px solid var(--line-f);color:var(--txt);border-radius:9px;padding:8px 11px;font-size:13px;outline:none}
+.field input:focus,.field select:focus,.inl:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--glow)}
+.inl{padding:7px 10px;font-size:12.5px}
+.hint{font-size:11.5px;color:var(--mut)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.stat .l{font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--mut);font-weight:700}
+.stat .v{font-size:24px;font-weight:800;letter-spacing:-.6px;margin-top:6px;color:var(--txt)}
+.stat .v.acc{color:var(--acc)} .stat .v.pos{color:var(--pos)} .stat .v.neg{color:var(--neg)} .stat .v.meta{color:var(--meta)}
+.stat .s{font-size:11.5px;color:var(--dim);margin-top:4px}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+@media(max-width:900px){.grid2,.grid3{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:16px;min-width:0}
+.panel h3{margin:0 0 12px;font-size:13px;letter-spacing:.3px;font-weight:700;display:flex;align-items:center;gap:8px}
+.panel h3 small{font-weight:500;color:var(--mut);font-size:11.5px;margin-left:auto}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-size:10.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--mut);font-weight:700;padding:7px 8px;border-bottom:1px solid var(--line)}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:hover td{background:var(--panel2)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mut{color:var(--mut)} .dim{color:var(--dim)} .pos{color:var(--pos)} .neg{color:var(--neg)} .acc{color:var(--acc)}
+.tag{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.tag.pos{color:var(--pos);border-color:color-mix(in srgb,var(--pos) 40%,transparent)}
+.tag.neg{color:var(--neg);border-color:color-mix(in srgb,var(--neg) 40%,transparent)}
+.tag.acc{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 40%,transparent)}
+.tag.meta{color:var(--meta);border-color:color-mix(in srgb,var(--meta) 40%,transparent)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+
+/* barras horizontais */
+.hbar{display:grid;grid-template-columns:150px 1fr 70px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.hbar:last-child{border-bottom:none}
+.hbar .nm{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbar .nm small{display:block;font-weight:500;color:var(--mut);font-size:10.5px}
+.hbar .tr{height:14px;background:var(--raise);border-radius:7px;overflow:hidden;display:flex}
+.hbar .tr i{display:block;height:100%}
+.hbar .vl{text-align:right;font-variant-numeric:tabular-nums;font-size:12px;font-weight:700}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--dim);margin:6px 0 10px}
+
+/* mapa de calor por hora */
+.heat{display:grid;grid-template-columns:74px repeat(24,1fr);gap:2px;font-size:10px}
+.heat .h{color:var(--mut);text-align:center;padding-bottom:2px}
+.heat .d{color:var(--dim);font-weight:600;padding-right:6px;white-space:nowrap;display:flex;align-items:center}
+.heat .c{height:18px;border-radius:3px;background:var(--raise);position:relative}
+.heat .c:hover::after{content:attr(data-t);position:absolute;bottom:22px;left:50%;transform:translateX(-50%);background:var(--txt);color:var(--bg);padding:3px 7px;border-radius:6px;white-space:nowrap;font-size:10.5px;z-index:5}
+
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px;flex-wrap:wrap}
+.tabs button{background:none;border:none;border-bottom:2px solid transparent;padding:8px 12px;font-size:12.5px;font-weight:600;color:var(--dim)}
+.tabs button.on{color:var(--acc);border-bottom-color:var(--acc)}
+.empty{padding:28px;text-align:center;color:var(--mut);font-size:13px}
+
+/* modal e toast */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;display:none;align-items:center;justify-content:center;padding:16px}
+.overlay.on{display:flex}
+.modal{background:var(--panel);border:1px solid var(--line-f);border-radius:16px;width:min(560px,100%);max-height:92vh;overflow:auto;padding:22px}
+.modal h2{margin:0 0 14px;font-size:17px}
+.acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--panel2);border:1px solid var(--acc);color:var(--txt);
+  padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:.2s;z-index:99;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%)}
+code{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:12px}
+pre{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:12px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+
+/* acesso */
+#acesso{display:none;min-height:100vh;align-items:center;justify-content:center;padding:20px}
+.ac-card{background:var(--panel);border:1px solid var(--line-f);border-radius:18px;padding:30px 28px;width:min(420px,100%)}
+.ac-card h2{margin:14px 0 4px;font-size:20px}.ac-card p{color:var(--dim);margin:0 0 16px;font-size:13px}
+.ac-logo{width:160px}.ac-btn{width:100%;justify-content:center;margin-top:6px}
+.ac-erro{background:color-mix(in srgb,var(--neg) 14%,transparent);border:1px solid var(--neg);color:var(--neg);border-radius:9px;padding:8px 10px;font-size:12.5px;margin-bottom:10px}
+.ac-rodape{font-size:11px;color:var(--mut);margin-top:16px;line-height:1.5}
+</style>
+<body>
+<div id="acesso"></div>
+<div class="scrim" onclick="toggleSide(false)"></div>
+<div class="shell" style="display:none">
+  <aside class="side" id="side">
+    <div class="brand" id="brand"></div>
+    <div class="nav-g"><b>Tempo</b>
+      <button class="nav-i on" data-v="painel" onclick="go('painel')"><span class="ic">◉</span>Painel</button>
+      <button class="nav-i" data-v="pessoas" onclick="go('pessoas')"><span class="ic">◔</span>Por pessoa</button>
+      <button class="nav-i" data-v="apps" onclick="go('apps')"><span class="ic">▤</span>Apps e sites</button>
+      <button class="nav-i" data-v="clientes" onclick="go('clientes')"><span class="ic">◈</span>Por cliente</button>
+    </div>
+    <div class="nav-g"><b>Configuração</b>
+      <button class="nav-i" data-v="regras" onclick="go('regras')"><span class="ic">≡</span>Regras <span class="n" id="n_regras">0</span></button>
+      <button class="nav-i" data-v="colabs" onclick="go('colabs')"><span class="ic">☺</span>Colaboradores <span class="n" id="n_colabs">0</span></button>
+    </div>
+    <div class="side-foot">
+      <div class="temas">
+        <button class="tema-b on" style="background:#0e131d" title="Escuro" onclick="tema('lidere')"></button>
+        <button class="tema-b" style="background:#ffffff" title="Claro" onclick="tema('claro')"></button>
+      </div>
+      <button class="lnk" onclick="mostrarPrivacidade()">Aviso de transparência</button>
+      <button class="lnk" id="quem"></button>
+      <button class="lnk" onclick="sair()">Sair</button>
+    </div>
+  </aside>
+  <div class="main">
+    <div class="topbar">
+      <button class="burger" onclick="toggleSide()">☰</button>
+      <h1 id="titulo">Painel<span id="subtitulo"></span></h1>
+      <div class="tb-acts">
+        <div class="seg" id="periodos">
+          <button data-p="hoje" onclick="periodo('hoje')">Hoje</button>
+          <button data-p="ontem" onclick="periodo('ontem')">Ontem</button>
+          <button data-p="semana" class="on" onclick="periodo('semana')">Semana</button>
+          <button data-p="mes" onclick="periodo('mes')">Mês</button>
+          <button data-p="30" onclick="periodo('30')">30 dias</button>
+        </div>
+        <input class="inl" type="date" id="d_ini" onchange="periodo('custom')">
+        <input class="inl" type="date" id="d_fim" onchange="periodo('custom')">
+        <select class="inl" id="f_colab" onchange="render()"><option value="">Todas as pessoas</option></select>
+        <button class="btn" onclick="carregar()">↻ Atualizar</button>
+      </div>
+    </div>
+    <div class="page" id="page"></div>
+  </div>
+</div>
+<div class="overlay" id="overlay" onclick="if(event.target===this)fecharModal()"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================================
+   Gestor de Tempo Lidere — painel
+   Lê os eventos do agente (tabela tempo_eventos) já agregados pelos RPCs
+   tempo_resumo / tempo_por_hora / tempo_dias e aplica as regras de
+   classificação (tempo_regras) no navegador. Mesmo Supabase e mesmos
+   usuários da Central Lidere.
+   ========================================================================= */
+const SB_URL = 'https://cwskkoiqikjvvanyltrr.supabase.co';
+const SB_KEY = 'sb_publishable_zRU6_fF48f0GvccPY7pRYw_Utz8K9Z9';
+const sb = supabase.createClient(SB_URL, SB_KEY);
+let ME = null, PERFIL = null;
+const DB = { colabs: [], regras: [], resumo: [], horas: [], dias: [] };
+let VIEW = 'painel', PER = 'semana', INI = null, FIM = null, SUB = {};
+let timerAuto = null;
+
+const LOGO_SVG = `<svg viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg" aria-label="Lidere">
+<g transform="translate(0,-10)"><polygon points="87,26 149.4,62 149.4,134 87,170 24.6,134 24.6,62" fill="none" stroke="var(--acc)" stroke-width="2.2" opacity=".85"/>
+<circle cx="87" cy="26" r="7" fill="var(--acc-s)"/><circle cx="87" cy="26" r="3" fill="var(--txt)"/>
+<rect x="62" y="104" width="14" height="40" rx="2" fill="var(--acc-d)"/><rect x="80" y="86" width="14" height="58" rx="2" fill="var(--acc-d)"/><rect x="98" y="66" width="14" height="78" rx="2" fill="var(--acc)"/></g>
+<text x="185" y="112" font-family="Segoe UI,Arial,sans-serif" font-size="78" font-weight="800" letter-spacing="6" fill="var(--txt)">LID<tspan fill="var(--acc)">≡</tspan>RE</text>
+<text x="190" y="150" font-family="Segoe UI,Arial,sans-serif" font-size="22" letter-spacing="7" fill="var(--mut)">GESTOR DE TEMPO</text></svg>`;
+
+/* ---------- utilidades ---------- */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const gEl = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+function hms(s) { s = Math.round(s || 0); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? `${h}h ${pad(m)}min` : m ? `${m}min` : `${s}s`; }
+function hdec(s) { return (s / 3600).toFixed(1).replace('.', ',') + 'h'; }
+function pct(a, b) { return b ? Math.round(100 * a / b) + '%' : '–'; }
+function dISO(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+function dBR(iso) { return iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : ''; }
+function dLong(iso) { const d = new Date(iso + 'T12:00:00'); return d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' }); }
+function hora(ts) { return ts ? new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '–'; }
+function toast(m) { const t = gEl('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('on'), 2800); }
+function tema(t) { document.documentElement.dataset.tema = t; localStorage.setItem('tempo_tema', t); document.querySelectorAll('.tema-b').forEach((b, i) => b.classList.toggle('on', ['lidere', 'claro'][i] === t)); }
+function toggleSide(f) { const s = gEl('side'); const on = f === undefined ? !s.classList.contains('open') : f; s.classList.toggle('open', on); document.querySelector('.scrim').classList.toggle('on', on); }
+const CORES = ['#d4a840', '#5a9fe0', '#3ea06b', '#8a7cf2', '#ef6b6b', '#2ee6c0', '#f0b448', '#c2f24d', '#ec4899', '#06b6d4'];
+const corColab = id => { const i = DB.colabs.findIndex(c => c.id === id); return CORES[(i < 0 ? 0 : i) % CORES.length]; };
+const nomeColab = id => (DB.colabs.find(c => c.id === id) || {}).nome || '?';
+const souAdmin = () => !!(PERFIL && PERFIL.is_admin);
+
+/* ---------- acesso ---------- */
+function telaAcesso(msg) {
+  const box = gEl('acesso'); box.style.display = 'flex'; document.querySelector('.shell').style.display = 'none';
+  box.innerHTML = `<div class="ac-card"><div class="ac-logo">${LOGO_SVG}</div>
+    <h2>Entrar</h2><p>Gestor de Tempo · a mesma conta da Central Lidere</p>
+    <div class="field"><label>E-mail</label><input id="ac_email" type="email" autocomplete="username"></div>
+    <div class="field"><label>Senha</label><input id="ac_senha" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrar()"></div>
+    ${msg ? `<div class="ac-erro">${esc(msg)}</div>` : ''}
+    <button class="btn btn-gold ac-btn" onclick="entrar()">Entrar</button>
+    <div class="ac-rodape">Sem conta? Solicite acesso na Central Lidere; o mesmo login vale aqui.<br>Dados hospedados no Brasil (São Paulo). Acesso liberado por um administrador.<br>bpo@prosperesec.com.br</div></div>`;
+  setTimeout(() => gEl('ac_email') && gEl('ac_email').focus(), 60);
+}
+async function entrar() {
+  const email = gEl('ac_email').value.trim(), senha = gEl('ac_senha').value;
+  if (!email || !senha) return telaAcesso('Informe e-mail e senha.');
+  const { error } = await sb.auth.signInWithPassword({ email, password: senha });
+  if (error) return telaAcesso(/Invalid login/i.test(error.message) ? 'E-mail ou senha não conferem.' : error.message);
+  iniciar();
+}
+async function sair() { await sb.auth.signOut(); location.reload(); }
+async function iniciar() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return telaAcesso();
+  ME = session.user;
+  const { data: p } = await sb.from('profiles').select('*').eq('id', ME.id).maybeSingle();
+  PERFIL = p;
+  if (!p || !p.approved) return telaAcesso('Seu cadastro ainda não foi liberado por um administrador.');
+  gEl('acesso').style.display = 'none'; document.querySelector('.shell').style.display = 'grid';
+  gEl('brand').innerHTML = LOGO_SVG + '<div class="sub">BPO Financeiro · Gestão</div>';
+  gEl('quem').textContent = ME.email;
+  tema(localStorage.getItem('tempo_tema') || 'lidere');
+  periodo('semana');
+}
+
+/* ---------- período ---------- */
+function periodo(p) {
+  PER = p;
+  const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+  let ini = new Date(hoje), fim = new Date(hoje); fim.setDate(fim.getDate() + 1);
+  if (p === 'ontem') { ini.setDate(ini.getDate() - 1); fim = new Date(hoje); }
+  else if (p === 'semana') { const dow = (hoje.getDay() + 6) % 7; ini.setDate(ini.getDate() - dow); }
+  else if (p === 'mes') { ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1); }
+  else if (p === '30') { ini.setDate(ini.getDate() - 29); }
+  else if (p === 'custom') {
+    const a = gEl('d_ini').value, b = gEl('d_fim').value; if (!a || !b) return;
+    ini = new Date(a + 'T00:00:00'); fim = new Date(b + 'T00:00:00'); fim.setDate(fim.getDate() + 1);
+  }
+  INI = ini; FIM = fim;
+  if (p !== 'custom') { gEl('d_ini').value = dISO(ini); const f1 = new Date(fim); f1.setDate(f1.getDate() - 1); gEl('d_fim').value = dISO(f1); }
+  document.querySelectorAll('#periodos button').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+  carregar();
+}
+function diasDoPeriodo() { const out = []; for (let d = new Date(INI); d < FIM; d.setDate(d.getDate() + 1)) out.push(dISO(d)); return out; }
+
+/* ---------- carga ---------- */
+async function carregar() {
+  const args = { p_ini: INI.toISOString(), p_fim: FIM.toISOString() };
+  const [c, r, res, h, d] = await Promise.all([
+    sb.from('tempo_colaboradores').select('*').order('nome'),
+    sb.from('tempo_regras').select('*').order('ordem').order('criado_em'),
+    sb.rpc('tempo_resumo', args), sb.rpc('tempo_por_hora', args), sb.rpc('tempo_dias', args)]);
+  const err = [c, r, res, h, d].find(x => x.error); if (err) { toast('Erro ao carregar: ' + err.error.message); console.error(err.error); }
+  DB.colabs = c.data || []; DB.regras = r.data || []; DB.resumo = res.data || []; DB.horas = h.data || []; DB.dias = d.data || [];
+  const sel = gEl('f_colab'), v = sel.value;
+  sel.innerHTML = '<option value="">Todas as pessoas</option>' + DB.colabs.map(x => `<option value="${x.id}">${esc(x.nome)}</option>`).join('');
+  sel.value = v;
+  gEl('n_regras').textContent = DB.regras.filter(x => x.ativo).length; gEl('n_colabs').textContent = DB.colabs.filter(x => x.ativo).length;
+  classificarTudo(); render();
+  clearTimeout(timerAuto); if (PER === 'hoje') timerAuto = setTimeout(carregar, 60000);
+}
+
+/* ---------- classificação ----------
+   Cada linha do resumo (app + título) passa pelas regras em ordem. A primeira
+   regra que casa define a categoria, a primeira com cliente define o cliente e
+   a primeira com produtivo definido decide o rótulo. Ocioso é sempre ocioso. */
+function classificar(app, titulo, ocioso) {
+  if (ocioso) return { categoria: 'Ocioso', cliente: null, produtivo: null, bucket: 'ocioso' };
+  let categoria = null, cliente = null, produtivo = null;
+  const a = (app || '').toLowerCase(), t = (titulo || '').toLowerCase();
+  for (const r of DB.regras) {
+    if (!r.ativo || !r.padrao) continue;
+    const alvo = r.campo === 'app' ? a : t;
+    if (!alvo.includes(r.padrao.toLowerCase())) continue;
+    if (categoria === null && r.categoria) categoria = r.categoria;
+    if (cliente === null && r.cliente) cliente = r.cliente;
+    if (produtivo === null && r.produtivo !== null && r.produtivo !== undefined) produtivo = r.produtivo;
+  }
+  const bucket = produtivo === true ? 'prod' : produtivo === false ? 'nprod' : 'semclass';
+  return { categoria: categoria || (app ? app : 'Sem classificação'), cliente, produtivo, bucket };
+}
+function classificarTudo() {
+  for (const l of DB.resumo) Object.assign(l, classificar(l.app, l.titulo, l.ocioso), { segundos: Number(l.segundos), eventos: Number(l.eventos) });
+}
+const filtrado = () => { const f = gEl('f_colab').value; return f ? DB.resumo.filter(l => l.colaborador_id === f) : DB.resumo; };
+function somar(linhas, chave) {
+  const m = new Map();
+  for (const l of linhas) { const k = chave(l); if (k === undefined || k === null) continue; const o = m.get(k) || { k, total: 0, prod: 0, nprod: 0, semclass: 0, ocioso: 0, eventos: 0 }; o.total += l.segundos; o[l.bucket] += l.segundos; o.eventos += l.eventos; m.set(k, o); }
+  return [...m.values()].sort((a, b) => b.total - a.total);
+}
+const BUCKET_COR = { prod: 'var(--pos)', nprod: 'var(--neg)', semclass: 'var(--meta)', ocioso: 'var(--mut)' };
+const BUCKET_NOME = { prod: 'Produtivo', nprod: 'Não produtivo', semclass: 'Sem classificação', ocioso: 'Ocioso' };
+function barra(o, max) {
+  const w = k => max ? (100 * o[k] / max).toFixed(1) + '%' : '0';
+  return `<div class="tr">${['prod', 'semclass', 'nprod', 'ocioso'].map(k => `<i style="width:${w(k)};background:${BUCKET_COR[k]}" title="${BUCKET_NOME[k]}: ${hms(o[k])}"></i>`).join('')}</div>`;
+}
+const legenda = () => `<div class="legend">${Object.keys(BUCKET_NOME).map(k => `<span><span class="dot" style="background:${BUCKET_COR[k]}"></span>${BUCKET_NOME[k]}</span>`).join('')}</div>`;
+
+/* ---------- navegação e render ---------- */
+const TITULOS = { painel: ['Painel', 'quem produz, no quê, e quanto fica parado'], pessoas: ['Por pessoa', 'jornada, horário real e mapa de calor'], apps: ['Apps e sites', 'onde o tempo vai, por programa e janela'], clientes: ['Por cliente', 'tempo dedicado a cada carteira'], regras: ['Regras de classificação', 'o que conta como produtivo, categoria e cliente'], colabs: ['Colaboradores', 'agentes instalados e tokens'] };
+function go(v) { VIEW = v; document.querySelectorAll('.nav-i').forEach(b => b.classList.toggle('on', b.dataset.v === v)); toggleSide(false); render(); }
+function render() {
+  const [t, s] = TITULOS[VIEW]; gEl('titulo').innerHTML = `${t}<span id="subtitulo">${s} · ${dBR(dISO(INI))} a ${dBR(gEl('d_fim').value)}</span>`;
+  const fn = { painel: viewPainel, pessoas: viewPessoas, apps: viewApps, clientes: viewClientes, regras: viewRegras, colabs: viewColabs }[VIEW];
+  gEl('page').innerHTML = fn();
+}
+function vazio(msg) { return `<div class="panel"><div class="empty">${msg || 'Nenhum registro no período. O agente envia a cada minuto; confira em Colaboradores se ele está ativo.'}</div></div>`; }
+
+/* ---------- Painel ---------- */
+function viewPainel() {
+  const L = filtrado(); if (!L.length) return vazio();
+  const tot = somar(L, () => 'x')[0];
+  const porPessoa = somar(L, l => l.colaborador_id);
+  const nDias = new Set(L.map(l => l.dia)).size;
+  const porCat = somar(L.filter(l => !l.ocioso), l => l.categoria).slice(0, 12);
+  const porCli = somar(L.filter(l => l.cliente), l => l.cliente).slice(0, 10);
+  const maxP = Math.max(...porPessoa.map(o => o.total), 1);
+  const ativo = tot.total - tot.ocioso;
+  return `
+  <div class="stats">
+    <div class="stat"><div class="l">Tempo registrado</div><div class="v">${hdec(tot.total)}</div><div class="s">${nDias} dia(s) · ${porPessoa.length} pessoa(s)</div></div>
+    <div class="stat"><div class="l">Ativo no computador</div><div class="v acc">${hdec(ativo)}</div><div class="s">${pct(ativo, tot.total)} do registrado</div></div>
+    <div class="stat"><div class="l">Produtivo</div><div class="v pos">${hdec(tot.prod)}</div><div class="s">${pct(tot.prod, tot.total)} do registrado</div></div>
+    <div class="stat"><div class="l">Não produtivo</div><div class="v neg">${hdec(tot.nprod)}</div><div class="s">${pct(tot.nprod, tot.total)}</div></div>
+    <div class="stat"><div class="l">Ocioso</div><div class="v">${hdec(tot.ocioso)}</div><div class="s">${pct(tot.ocioso, tot.total)} · sem mouse/teclado</div></div>
+    <div class="stat"><div class="l">Sem classificação</div><div class="v meta">${hdec(tot.semclass)}</div><div class="s"><a href="#" onclick="go('regras');return false">criar regras</a></div></div>
+  </div>
+  <div class="grid3">
+    <div class="panel"><h3>Ranking de produtividade <small>produtivo ÷ tempo registrado</small></h3>${legenda()}
+      ${porPessoa.map((o, i) => `<div class="hbar"><div class="nm"><span class="dot" style="background:${corColab(o.k)}"></span>${i + 1}. ${esc(nomeColab(o.k))}<small>${hdec(o.total)} registradas · ocioso ${pct(o.ocioso, o.total)}</small></div>${barra(o, maxP)}<div class="vl pos">${pct(o.prod, o.total)}</div></div>`).join('')}
+    </div>
+    <div class="panel"><h3>Por cliente <small>pelas regras com cliente</small></h3>
+      ${porCli.length ? porCli.map(o => `<div class="hbar"><div class="nm">${esc(o.k)}</div><div class="tr"><i style="width:${(100 * o.total / porCli[0].total).toFixed(1)}%;background:var(--acc)"></i></div><div class="vl">${hms(o.total)}</div></div>`).join('') : '<div class="empty">Nenhuma regra com cliente casou. Em Regras, associe o nome do cliente (como aparece no título da planilha ou do sistema).</div>'}
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="panel"><h3>Por categoria <small>tempo ativo</small></h3>
+      ${porCat.map(o => `<div class="hbar"><div class="nm">${esc(o.k)}</div>${barra(o, porCat[0].total)}<div class="vl">${hms(o.total)}</div></div>`).join('')}
+    </div>
+    <div class="panel"><h3>Dia a dia <small>ativo × ocioso</small></h3>
+      <table><tr><th>Dia</th><th class="num">Registrado</th><th class="num">Produtivo</th><th class="num">Ocioso</th><th class="num">Pessoas</th></tr>
+      ${somar(L, l => l.dia).sort((a, b) => a.k < b.k ? -1 : 1).map(o => `<tr><td>${dLong(o.k)}</td><td class="num">${hms(o.total)}</td><td class="num pos">${pct(o.prod, o.total)}</td><td class="num">${pct(o.ocioso, o.total)}</td><td class="num">${new Set(L.filter(l => l.dia === o.k).map(l => l.colaborador_id)).size}</td></tr>`).join('')}
+      </table></div>
+  </div>`;
+}
+
+/* ---------- Por pessoa ---------- */
+function viewPessoas() {
+  const L = filtrado(); if (!L.length) return vazio();
+  const f = gEl('f_colab').value;
+  const pessoas = f ? DB.colabs.filter(c => c.id === f) : DB.colabs.filter(c => L.some(l => l.colaborador_id === c.id));
+  const dias = diasDoPeriodo();
+  return pessoas.map(c => {
+    const lc = L.filter(l => l.colaborador_id === c.id); if (!lc.length) return '';
+    const tot = somar(lc, () => 'x')[0];
+    const dd = DB.dias.filter(d => d.colaborador_id === c.id).sort((a, b) => a.dia < b.dia ? -1 : 1);
+    const hh = DB.horas.filter(h => h.colaborador_id === c.id);
+    const maxH = Math.max(...hh.map(h => Number(h.ativo)), 1);
+    const topApps = somar(lc.filter(l => !l.ocioso), l => l.categoria).slice(0, 6);
+    const diasComDado = dias.filter(d => dd.some(x => x.dia === d));
+    const heat = `<div class="heat"><div></div>${[...Array(24)].map((_, h) => `<div class="h">${h}</div>`).join('')}
+      ${diasComDado.map(d => `<div class="d">${dLong(d)}</div>${[...Array(24)].map((_, h) => { const x = hh.find(y => y.dia === d && y.hora === h); const at = x ? Number(x.ativo) : 0, oc = x ? Number(x.ocioso) : 0; const a = at ? (0.18 + 0.82 * at / maxH).toFixed(2) : 0; return `<div class="c" data-t="${h}h: ativo ${hms(at)} · ocioso ${hms(oc)}" style="background:${at ? `color-mix(in srgb, var(--acc) ${Math.round(a * 100)}%, var(--raise))` : oc ? 'color-mix(in srgb, var(--mut) 35%, var(--raise))' : 'var(--raise)'}"></div>`; }).join('')}`).join('')}</div>`;
+    return `<div class="panel"><h3><span class="dot" style="background:${corColab(c.id)}"></span>${esc(c.nome)} <small>${hdec(tot.total)} registradas · produtivo ${pct(tot.prod, tot.total)} · ocioso ${pct(tot.ocioso, tot.total)}</small></h3>
+      <div class="grid3">
+        <div><table><tr><th>Dia</th><th>Início</th><th>Fim</th><th class="num">Registrado</th><th class="num">Ativo</th><th class="num">Ocioso</th><th class="num">Produtivo</th></tr>
+          ${dd.map(d => { const ld = lc.filter(l => l.dia === d.dia); const t = somar(ld, () => 'x')[0] || { prod: 0, total: 1 }; return `<tr><td>${dLong(d.dia)}</td><td>${hora(d.primeiro)}</td><td>${hora(d.ultimo)}</td><td class="num">${hms(Number(d.ativo) + Number(d.ocioso))}</td><td class="num acc">${hms(d.ativo)}</td><td class="num mut">${hms(d.ocioso)}</td><td class="num pos">${pct(t.prod, t.total)}</td></tr>`; }).join('')}
+        </table></div>
+        <div>${legenda()}${topApps.map(o => `<div class="hbar"><div class="nm">${esc(o.k)}</div>${barra(o, topApps[0].total)}<div class="vl">${hms(o.total)}</div></div>`).join('')}</div>
+      </div>
+      <h3 style="margin-top:16px">Mapa de calor por hora <small>mais dourado = mais ativo; cinza = ocioso</small></h3>${heat}</div>`;
+  }).join('') || vazio();
+}
+
+/* ---------- Apps e sites ---------- */
+function viewApps() {
+  const L = filtrado(); if (!L.length) return vazio();
+  const q = (SUB.busca || '').toLowerCase();
+  const porCat = somar(L, l => l.categoria);
+  const cat = SUB.cat && porCat.some(o => o.k === SUB.cat) ? SUB.cat : (porCat[0] || {}).k;
+  const linhas = somar(L.filter(l => l.categoria === cat && (!q || (l.titulo + ' ' + l.app).toLowerCase().includes(q))), l => l.app + '\u0001' + l.titulo).slice(0, 200);
+  const tot = porCat.reduce((s, o) => s + o.total, 0);
+  return `<div class="grid3">
+    <div class="panel"><h3>Categorias <small>clique para abrir</small></h3>
+      ${porCat.map(o => `<div class="hbar" style="cursor:pointer;${o.k === cat ? 'background:var(--panel2);border-radius:8px' : ''}" onclick="SUB.cat='${esc(o.k).replace(/'/g, "\\'")}';render()"><div class="nm">${esc(o.k)}</div>${barra(o, porCat[0].total)}<div class="vl">${pct(o.total, tot)}</div></div>`).join('')}
+    </div>
+    <div class="panel"><h3>Janelas em “${esc(cat)}” <small>${linhas.length} itens</small></h3>
+      <div class="row" style="margin-bottom:10px"><input class="inl" placeholder="buscar no título" value="${esc(SUB.busca || '')}" oninput="SUB.busca=this.value;render()" style="flex:1"></div>
+      <table><tr><th>App</th><th>Título da janela</th><th class="num">Tempo</th><th></th></tr>
+      ${linhas.map(o => { const [app, tit] = o.k.split('\u0001'); const c = classificar(app, tit, false); return `<tr><td class="dim">${esc(app)}</td><td title="${esc(tit)}">${esc(tit.length > 70 ? tit.slice(0, 70) + '…' : tit) || '<span class="mut">(sem título)</span>'}${c.cliente ? ` <span class="tag acc">${esc(c.cliente)}</span>` : ''}</td><td class="num">${hms(o.total)}</td><td><button class="btn btn-sm btn-ghost" onclick='novaRegra(${JSON.stringify(tit)},${JSON.stringify(app)})'>+ regra</button></td></tr>`; }).join('')}
+      </table></div>
+  </div>`;
+}
+
+/* ---------- Por cliente ---------- */
+function viewClientes() {
+  const L = filtrado().filter(l => l.cliente); if (!L.length) return vazio('Nenhum tempo ligado a cliente ainda. Em Regras, cadastre o nome do cliente como aparece nos títulos (planilha, pasta, sistema) e marque o campo Cliente.');
+  const porCli = somar(L, l => l.cliente);
+  const pessoas = [...new Set(L.map(l => l.colaborador_id))];
+  const tot = porCli.reduce((s, o) => s + o.total, 0);
+  return `<div class="panel"><h3>Tempo por cliente <small>${hdec(tot)} no período</small></h3>
+    <table><tr><th>Cliente</th><th class="num">Total</th><th class="num">%</th>${pessoas.map(p => `<th class="num">${esc(nomeColab(p))}</th>`).join('')}<th>Principais categorias</th></tr>
+    ${porCli.map(o => { const lc = L.filter(l => l.cliente === o.k); const cats = somar(lc, l => l.categoria).slice(0, 3).map(c => `${esc(c.k)} ${pct(c.total, o.total)}`).join(' · '); return `<tr><td><b>${esc(o.k)}</b></td><td class="num acc">${hms(o.total)}</td><td class="num">${pct(o.total, tot)}</td>${pessoas.map(p => `<td class="num">${hms(lc.filter(l => l.colaborador_id === p).reduce((s, l) => s + l.segundos, 0)) }</td>`).join('')}<td class="dim">${cats}</td></tr>`; }).join('')}
+    </table></div>`;
+}
+
+/* ---------- Regras ---------- */
+function viewRegras() {
+  const L = DB.resumo.filter(l => !l.ocioso && l.bucket === 'semclass');
+  const semClass = somar(L, l => l.app + '\u0001' + l.titulo).slice(0, 25);
+  return `<div class="grid3">
+    <div class="panel"><h3>Regras <small>${DB.regras.length} · aplicadas em ordem; a primeira que casa vale</small>
+      <button class="btn btn-sm btn-gold" onclick="novaRegra()">+ Nova regra</button></h3>
+      <table><tr><th>Ordem</th><th>Campo</th><th>Contém</th><th>Categoria</th><th>Cliente</th><th>Produtivo</th><th></th></tr>
+      ${DB.regras.map(r => `<tr style="${r.ativo ? '' : 'opacity:.45'}"><td class="num">${r.ordem}</td><td class="dim">${r.campo === 'app' ? 'programa' : 'título'}</td><td><code>${esc(r.padrao)}</code></td><td>${esc(r.categoria || '')}</td><td>${r.cliente ? `<span class="tag acc">${esc(r.cliente)}</span>` : ''}</td><td>${r.produtivo === true ? '<span class="tag pos">sim</span>' : r.produtivo === false ? '<span class="tag neg">não</span>' : '<span class="mut">–</span>'}</td>
+        <td style="white-space:nowrap"><button class="btn btn-sm btn-ghost" onclick="editarRegra('${r.id}')">editar</button> <button class="btn btn-sm btn-ghost" onclick="toggleRegra('${r.id}')">${r.ativo ? 'desativar' : 'ativar'}</button> <button class="btn btn-sm btn-neg" onclick="apagarRegra('${r.id}')">×</button></td></tr>`).join('')}
+      </table></div>
+    <div class="panel"><h3>Sem classificação <small>maiores do período</small></h3>
+      ${semClass.length ? `<table>${semClass.map(o => { const [app, tit] = o.k.split('\u0001'); return `<tr><td><span class="dim">${esc(app)}</span><br>${esc(tit.length > 60 ? tit.slice(0, 60) + '…' : tit) || '<span class="mut">(sem título)</span>'}</td><td class="num">${hms(o.total)}</td><td><button class="btn btn-sm btn-ghost" onclick='novaRegra(${JSON.stringify(tit)},${JSON.stringify(app)})'>+</button></td></tr>`; }).join('')}</table>` : '<div class="empty">Tudo classificado.</div>'}
+    </div></div>`;
+}
+function formRegra(r) {
+  return `<div class="field"><label>Campo</label><select id="r_campo"><option value="titulo" ${r.campo !== 'app' ? 'selected' : ''}>Título da janela</option><option value="app" ${r.campo === 'app' ? 'selected' : ''}>Nome do programa</option></select></div>
+  <div class="field"><label>Contém (sem diferenciar maiúsculas)</label><input id="r_padrao" value="${esc(r.padrao || '')}"><div class="hint">Ex.: "RVG", "Nibo", "WhatsApp", "Conciliação". Um pedaço do título basta.</div></div>
+  <div class="row"><div class="field" style="flex:1"><label>Categoria</label><input id="r_categoria" list="cats" value="${esc(r.categoria || '')}"><datalist id="cats">${[...new Set(DB.regras.map(x => x.categoria).filter(Boolean))].map(c => `<option value="${esc(c)}">`).join('')}</datalist></div>
+  <div class="field" style="flex:1"><label>Cliente</label><input id="r_cliente" list="clis" value="${esc(r.cliente || '')}"><datalist id="clis">${[...new Set(DB.regras.map(x => x.cliente).filter(Boolean))].map(c => `<option value="${esc(c)}">`).join('')}</datalist></div></div>
+  <div class="row"><div class="field" style="flex:1"><label>Produtivo</label><select id="r_produtivo"><option value="" ${r.produtivo == null ? 'selected' : ''}>não define</option><option value="true" ${r.produtivo === true ? 'selected' : ''}>sim</option><option value="false" ${r.produtivo === false ? 'selected' : ''}>não</option></select></div>
+  <div class="field" style="width:110px"><label>Ordem</label><input id="r_ordem" type="number" value="${r.ordem ?? 50}"><div class="hint">menor = antes</div></div></div>`;
+}
+function novaRegra(titulo, app) {
+  const r = { campo: 'titulo', padrao: titulo || '', ordem: 50 };
+  if (titulo === '' && app) { r.campo = 'app'; r.padrao = app; }
+  abrirModal(`<h2>Nova regra</h2>${formRegra(r)}<div class="acts"><button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button><button class="btn btn-gold" onclick="salvarRegra()">Salvar</button></div>`);
+}
+function editarRegra(id) { const r = DB.regras.find(x => x.id === id); abrirModal(`<h2>Editar regra</h2>${formRegra(r)}<div class="acts"><button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button><button class="btn btn-gold" onclick="salvarRegra('${id}')">Salvar</button></div>`); }
+async function salvarRegra(id) {
+  const p = gEl('r_produtivo').value;
+  const obj = { campo: gEl('r_campo').value, padrao: gEl('r_padrao').value.trim(), categoria: gEl('r_categoria').value.trim() || null, cliente: gEl('r_cliente').value.trim() || null, produtivo: p === '' ? null : p === 'true', ordem: Number(gEl('r_ordem').value) || 50 };
+  if (!obj.padrao) return toast('Informe o texto que a regra procura.');
+  const { error } = id ? await sb.from('tempo_regras').update(obj).eq('id', id) : await sb.from('tempo_regras').insert(obj);
+  if (error) return toast('Erro: ' + error.message);
+  fecharModal(); toast('Regra salva'); carregar();
+}
+async function toggleRegra(id) { const r = DB.regras.find(x => x.id === id); const { error } = await sb.from('tempo_regras').update({ ativo: !r.ativo }).eq('id', id); if (error) return toast(error.message); carregar(); }
+async function apagarRegra(id) { if (!confirm('Apagar esta regra?')) return; const { error } = await sb.from('tempo_regras').delete().eq('id', id); if (error) return toast(error.message); carregar(); }
+
+/* ---------- Colaboradores ---------- */
+function viewColabs() {
+  const agora = Date.now();
+  return `<div class="panel"><h3>Colaboradores <small>um token por pessoa; o agente usa o token para se identificar</small>
+      ${souAdmin() ? '<button class="btn btn-sm btn-gold" onclick="novoColab()">+ Novo colaborador</button>' : ''}</h3>
+    <table><tr><th>Nome</th><th>E-mail</th><th>Máquina</th><th>Último envio</th><th>Status</th><th>Token</th><th></th></tr>
+    ${DB.colabs.map(c => { const dt = c.ultimo_envio ? new Date(c.ultimo_envio) : null; const min = dt ? (agora - dt) / 60000 : null; const st = !c.ativo ? '<span class="tag">desativado</span>' : min === null ? '<span class="tag">nunca enviou</span>' : min < 5 ? '<span class="tag pos">● ao vivo</span>' : min < 120 ? `<span class="tag acc">há ${Math.round(min)} min</span>` : '<span class="tag neg">parado</span>'; return `<tr style="${c.ativo ? '' : 'opacity:.5'}"><td><span class="dot" style="background:${corColab(c.id)}"></span><b>${esc(c.nome)}</b></td><td class="dim">${esc(c.email || '')}</td><td class="dim">${esc(c.maquina || '')}</td><td class="dim">${dt ? dt.toLocaleString('pt-BR') : '–'}</td><td>${st}</td>
+      <td>${souAdmin() ? `<button class="btn btn-sm btn-ghost" onclick="verToken('${c.id}')">ver / instalar</button>` : '<span class="mut">admin</span>'}</td>
+      <td style="white-space:nowrap">${souAdmin() ? `<button class="btn btn-sm btn-ghost" onclick="editarColab('${c.id}')">editar</button> <button class="btn btn-sm btn-ghost" onclick="toggleColab('${c.id}')">${c.ativo ? 'desativar' : 'ativar'}</button>` : ''}</td></tr>`; }).join('')}
+    </table></div>
+  <div class="panel"><h3>Como instalar o agente numa máquina</h3>
+    <ol style="line-height:1.7;margin:0;padding-left:20px;font-size:13px">
+      <li>Instale o Python 3 em <a href="https://www.python.org/downloads/" target="_blank">python.org</a> marcando <b>Add python.exe to PATH</b>.</li>
+      <li>Copie a pasta <code>agente</code> (agente.py, instalar.ps1, desinstalar.ps1) para a máquina.</li>
+      <li>Abra o PowerShell na pasta e rode: <code>powershell -ExecutionPolicy Bypass -File instalar.ps1 -Token "TOKEN DA PESSOA"</code> (o token está no botão "ver / instalar").</li>
+      <li>Pronto: o agente sobe sozinho a cada login, com um ícone na bandeja onde a pessoa pode pausar o registro.</li>
+    </ol>
+    <p class="hint" style="margin-top:10px">O agente grava só o nome do programa, o título da janela e se houve mouse/teclado nos últimos 3 minutos. Não grava teclas, telas nem conteúdo. Avise a equipe por escrito antes de instalar (veja o Aviso de transparência no menu).</p></div>`;
+}
+function verToken(id) {
+  const c = DB.colabs.find(x => x.id === id);
+  abrirModal(`<h2>${esc(c.nome)}</h2><div class="field"><label>Token do agente</label><pre id="tk">${esc(c.token)}</pre></div>
+    <div class="field"><label>Comando de instalação (PowerShell, na pasta agente)</label><pre>powershell -ExecutionPolicy Bypass -File instalar.ps1 -Token "${esc(c.token)}"</pre></div>
+    <div class="acts"><button class="btn btn-ghost" onclick="navigator.clipboard.writeText(gEl('tk').textContent).then(()=>toast('Token copiado'))">Copiar token</button><button class="btn btn-gold" onclick="fecharModal()">Fechar</button></div>`);
+}
+function formColab(c) { return `<div class="field"><label>Nome</label><input id="c_nome" value="${esc(c.nome || '')}"></div><div class="field"><label>E-mail</label><input id="c_email" value="${esc(c.email || '')}"></div>`; }
+function novoColab() { abrirModal(`<h2>Novo colaborador</h2>${formColab({})}<div class="acts"><button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button><button class="btn btn-gold" onclick="salvarColab()">Criar</button></div>`); }
+function editarColab(id) { const c = DB.colabs.find(x => x.id === id); abrirModal(`<h2>Editar colaborador</h2>${formColab(c)}<div class="acts"><button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button><button class="btn btn-gold" onclick="salvarColab('${id}')">Salvar</button></div>`); }
+async function salvarColab(id) {
+  const obj = { nome: gEl('c_nome').value.trim(), email: gEl('c_email').value.trim() || null };
+  if (!obj.nome) return toast('Informe o nome.');
+  const { error } = id ? await sb.from('tempo_colaboradores').update(obj).eq('id', id) : await sb.from('tempo_colaboradores').insert(obj);
+  if (error) return toast('Erro: ' + error.message);
+  fecharModal(); toast(id ? 'Salvo' : 'Colaborador criado: abra "ver / instalar" para pegar o token'); carregar();
+}
+async function toggleColab(id) { const c = DB.colabs.find(x => x.id === id); const { error } = await sb.from('tempo_colaboradores').update({ ativo: !c.ativo }).eq('id', id); if (error) return toast(error.message); carregar(); }
+
+/* ---------- modal, privacidade ---------- */
+function abrirModal(html) { gEl('modal').innerHTML = html; gEl('overlay').classList.add('on'); const i = gEl('modal').querySelector('input'); if (i) setTimeout(() => i.focus(), 50); }
+function fecharModal() { gEl('overlay').classList.remove('on'); }
+function mostrarPrivacidade() {
+  abrirModal(`<h2>Aviso de transparência</h2>
+  <div style="font-size:13px;line-height:1.6;color:var(--dim)">
+  <p><b style="color:var(--txt)">O que o agente registra</b><br>Nome do programa em primeiro plano, título da janela, horário de início e fim de cada uso e se houve mouse ou teclado nos últimos minutos. Nada de teclas digitadas, capturas de tela, conteúdo de mensagens ou arquivos.</p>
+  <p><b style="color:var(--txt)">Para quê</b><br>Medir quanto tempo cada atividade e cada cliente consomem, equilibrar a carga da equipe e precificar o serviço. Não é instrumento disciplinar automático: o painel mostra números, e qualquer decisão passa por conversa.</p>
+  <p><b style="color:var(--txt)">Onde fica e quem vê</b><br>Servidor no Brasil (São Paulo), atrás de login; só usuários aprovados da Central Lidere enxergam. A pessoa pode pausar o registro pelo ícone da bandeja a qualquer momento (almoço, assunto pessoal).</p>
+  <p><b style="color:var(--txt)">Base legal</b><br>Monitoramento de equipamento de trabalho fornecido pela empresa, com ciência prévia e por escrito do colaborador (LGPD, art. 7º, IX, legítimo interesse, e art. 6º, princípios de finalidade e transparência). Recomenda-se termo de ciência assinado antes da instalação.</p>
+  <p>Responsável: Lidere BPO Financeiro · bpo@prosperesec.com.br</p></div>
+  <div class="acts"><button class="btn btn-gold" onclick="fecharModal()">Fechar</button></div>`);
+}
+
+sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_OUT') telaAcesso(); });
+iniciar();
+</script>
+</body>
+</html>
